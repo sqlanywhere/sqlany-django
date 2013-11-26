@@ -13,7 +13,7 @@ from setuptools import setup, find_packages
 import os,re
 
 with open( os.path.join( os.path.dirname(__file__), 'sqlany_django',
-                              '__init__.py' ) ) as v:
+                         '__init__.py' ) ) as v:
     VERSION = re.compile(r".*__version__ = '(.*?)'", re.S).match(v.read()).group(1)
 
 setup(name='sqlany_django',
@@ -24,12 +24,12 @@ setup(name='sqlany_django',
       author_email='graeme.perrow@sap.com',
       install_requires=['sqlanydb >= 1.0.4'],
       url='https://github.com/sqlanywhere/sqlany-django',
-      packages = find_packages(),
-      license='Apache 2.0',
+      packages=find_packages(),
+      license='New BSD',
       classifiers=[
         'Development Status :: 5 - Production/Stable',
         'Intended Audience :: Developers',
-        'License :: OSI Approved :: Apache Software License',
+        'License :: OSI Approved :: BSD License',
         'Natural Language :: English',
         'Operating System :: OS Independent',
         'Framework :: Django',
