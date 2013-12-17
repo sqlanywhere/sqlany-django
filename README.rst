@@ -45,7 +45,7 @@ tested with SQL Anywhere 12 and Django versions 1.1, 1.2.7, 1.3.3, and 1.4.1.
     
        Once you have installed setuptools, installing Django is a snap, simply run::
     
-           $ easy_install Django--1.4
+           $ easy_install Django==1.4
     
     (e) Python SQL Anywhere Database Interface
     
@@ -121,7 +121,7 @@ tested with SQL Anywhere 12 and Django versions 1.1, 1.2.7, 1.3.3, and 1.4.1.
 
     SQL Anywhere includes two different database servers -- The personal
     server (dbeng12) and the network server (dbsrv12). Both servers
-    servers support the same complete set of features except that the
+    support the same complete set of features except that the
     personal server is limited to running on one CPU, allows a maximum of
     10 concurrent connections and does not accept network connections from
     other machines. We will use the network server for our example. ::
@@ -151,10 +151,10 @@ tested with SQL Anywhere 12 and Django versions 1.1, 1.2.7, 1.3.3, and 1.4.1.
 
     Here's how the parameters correspond to SQL Anywhere connection parameters:
     
-       * NAME = DBN
-       * USER = USR
-       * PASSWORD = PWD
-       * HOST = HOST
+       * NAME = DatabaseName (DBN)
+       * USER = Userid (UID)
+       * PASSWORD = Password (PWD)
+       * HOST = Host
        * PORT = (port number in host, i.e. myhost:portnum)
     
     If you need to specify other connection parameters (eg. ENG, which is required
