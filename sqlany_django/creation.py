@@ -2,6 +2,8 @@ import sys, traceback, time, re
 from django.conf import settings
 from django.db.backends.creation import BaseDatabaseCreation, TEST_DATABASE_PREFIX
 
+from django import VERSION as djangoVersion
+
 try:
     import sqlanydb as Database
 except ImportError, e:
@@ -49,11 +51,19 @@ class DatabaseCreation(BaseDatabaseCreation):
     def sql_db_start_suffix(self):
         return 'AUTOSTOP OFF'
 
-    def sql_for_inline_foreign_key_references(self, field, known_models, style):
-        """Don't use inline references for SQL Anywhere. This makes it
-        easier to deal with conditionally creating UNIQUE constraints
-        and UNIQUE indexes"""
-        return [], True
+    if djangoVersion[:2] >= (1, 6):
+        def sql_for_inline_foreign_key_references(self, model, field, known_models, style):
+            """Don't use inline references for SQL Anywhere. This makes it
+            easier to deal with conditionally creating UNIQUE constraints
+            and UNIQUE indexes"""
+            return [], True
+    else:
+        def sql_for_inline_foreign_key_references(self, field, known_models, style):
+            """Don't use inline references for SQL Anywhere. This makes it
+            easier to deal with conditionally creating UNIQUE constraints
+            and UNIQUE indexes"""
+            return [], True
+
         
     def sql_for_inline_many_to_many_references(self, model, field, style):
         from django.db import models

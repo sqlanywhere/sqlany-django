@@ -1,12 +1,13 @@
 .. ***************************************************************************
-.. Copyright (c) 2013 SAP AG or an SAP affiliate company. All rights reserved.
+.. Copyright (c) 2014 SAP AG or an SAP affiliate company. All rights reserved.
 .. ***************************************************************************
 
 SQL Anywhere Django Driver
 ==========================
 This is a SQL Anywhere database backend for Django. The backend is
 distributed as a stand-alone python module. This backend has been
-tested with SQL Anywhere 12 and Django versions 1.1, 1.2.7, 1.3.3, and 1.4.1.
+tested with SQL Anywhere versions 12 and 16 using Django versions 1.1,
+1.1.4, 1.2.7, 1.3.7, 1.4.10, 1.5.5, and 1.6.1.
 
 #. Install the required software
 
@@ -41,12 +42,17 @@ tested with SQL Anywhere 12 and Django versions 1.1, 1.2.7, 1.3.3, and 1.4.1.
        system. This package is called "python-setuptools" on Ubuntu and
        "python-setuptools-devel" on Fedora.
     
-    (d) Django 1.4
+    (d) Django
     
        Once you have installed setuptools, installing Django is a snap, simply run::
     
-           $ easy_install Django==1.4
+           $ easy_install Django
+
+       If you want a specific version of Django, you can give the version using
+       the == syntax. For example, if you want 1.3.7, you can use::
     
+           $ easy_install Django==1.3.7
+
     (e) Python SQL Anywhere Database Interface
     
        If you are using pip to install the SQL Anywhere Django driver, you can
@@ -98,10 +104,10 @@ tested with SQL Anywhere 12 and Django versions 1.1, 1.2.7, 1.3.3, and 1.4.1.
     your install. Before trying to run the SQL Anywhere server or connect
     to a running server in a given shell you should make sure to source
     the file (with the "." command) corresponding to the bitness of the
-    SQL Anywhere binaries you want to use. For example, if the product is
-    installed in /opt/sqlanywhere12 you should run::
+    SQL Anywhere binaries you want to use. For example, if you are running 64-bit
+    software and the product is installed in /opt/sqlanywhere16 you should run::
     
-        $ . /opt/sqlanywhere12/bin32/sa_config.sh
+        $ . /opt/sqlanywhere16/bin64/sa_config.sh
 
 #. Create a database
 
@@ -120,13 +126,13 @@ tested with SQL Anywhere 12 and Django versions 1.1, 1.2.7, 1.3.3, and 1.4.1.
 #. Start the Database Server
 
     SQL Anywhere includes two different database servers -- The personal
-    server (dbeng12) and the network server (dbsrv12). Both servers
-    support the same complete set of features except that the
+    server (dbeng12/dbeng16) and the network server (dbsrv12/dbsrv16). Both
+    servers support the same complete set of features except that the
     personal server is limited to running on one CPU, allows a maximum of
     10 concurrent connections and does not accept network connections from
     other machines. We will use the network server for our example. ::
     
-       $ dbsrv12 django.db
+       $ dbsrv16 django.db
     
 #. Configure Django
 
@@ -156,7 +162,7 @@ tested with SQL Anywhere 12 and Django versions 1.1, 1.2.7, 1.3.3, and 1.4.1.
        * PASSWORD = Password (PWD)
        * HOST = Host
        * PORT = (port number in host, i.e. myhost:portnum)
-    
+
     If you need to specify other connection parameters (eg. ENG, which is required
     for client versions prior to v12.0.0), you can set a value with the key
     "OPTIONS", like this::
@@ -168,6 +174,21 @@ tested with SQL Anywhere 12 and Django versions 1.1, 1.2.7, 1.3.3, and 1.4.1.
 	      'USER': 'dba',
 	      'PASSWORD': 'sql',
 	      'OPTIONS': {'eng': 'django'}
+	  }
+       }
+
+    HOST and PORT default to 'localhost' and '2638'. If you want to use shared 
+    memory, set the HOST and PORT values to None::
+
+       DATABASES = {
+	  'default' : {
+ 	      'ENGINE': 'sqlany_django',
+	      'NAME': 'django',
+	      'USER': 'dba',
+	      'PASSWORD': 'sql',
+	      'OPTIONS': {'eng': 'django'},
+	      'HOST': None,
+	      'PORT': None
 	  }
        }
     

@@ -18,7 +18,6 @@ if djangoVersion[:2] >= (1, 4):
     from django.utils.timezone import is_aware, is_naive, utc, make_naive, get_default_timezone
     import datetime
 
-from django.db import utils
 from django.conf import settings
 from django.db.backends import *
 from django.db.backends.signals import connection_created
@@ -28,6 +27,9 @@ from sqlany_django.introspection import DatabaseIntrospection
 from sqlany_django.validation import DatabaseValidation
 
 from django.utils.safestring import SafeString, SafeUnicode
+
+DatabaseError = Database.DatabaseError
+IntegrityError = Database.IntegrityError
 
 Database.register_converter(Database.DT_TIMESTAMP, util.typecast_timestamp)
 Database.register_converter(Database.DT_DATE, util.typecast_date)
@@ -80,47 +82,37 @@ class CursorWrapper(object):
         if djangoVersion[:2] >= (1, 4) and settings.USE_TZ:
             args = _datetimes_in(args)
         try:
-            try:
-                if args != None:
-                    query = self.convert_query(query, len(args))
-                ret = self.cursor.execute(trace(query), trace(args))
-                return ret
-            except Database.OperationalError, e:
-                # Map some error codes to IntegrityError, since they seem to be
-                # misclassified and Django would prefer the more logical place.
-                if e[0] in self.codes_for_integrityerror:
-                    raise Database.IntegrityError(tuple(e))
-                raise
-        except Database.IntegrityError, e:
-            raise utils.IntegrityError(e)
-        except Database.DatabaseError, e:
-            raise utils.DatabaseError(e)
+            if args != None:
+                query = self.convert_query(query, len(args))
+            ret = self.cursor.execute(trace(query), trace(args))
+            return ret
+        except Database.OperationalError, e:
+            # Map some error codes to IntegrityError, since they seem to be
+            # misclassified and Django would prefer the more logical place.
+            if e[0] in self.codes_for_integrityerror:
+                raise Database.IntegrityError(tuple(e))
+            raise
 
     def executemany(self, query, args):
         if djangoVersion[:2] >= (1, 4) and settings.USE_TZ:
             args = tuple(_datetimes_in(arg) for arg in args)
         try:
             try:
-                try:
-                    len(args)
-                except TypeError:
-                    args = tuple(args)
-                if len(args) > 0:
-                    query = self.convert_query(query, len(args[0]))
-                    ret = self.cursor.executemany(trace(query), trace(args))
-                    return trace(ret)
-                else:
-                    return None
-            except Database.OperationalError, e:
-                # Map some error codes to IntegrityError, since they seem to be
-                # misclassified and Django would prefer the more logical place.
-                if e[0] in self.codes_for_integrityerror:
-                    raise Database.IntegrityError(tuple(e))
-                raise
-        except Database.IntegrityError, e:
-            raise utils.IntegrityError(e)
-        except Database.DatabaseError, e:
-            raise utils.DatabaseError(e)
+                len(args)
+            except TypeError:
+                args = tuple(args)
+            if len(args) > 0:
+                query = self.convert_query(query, len(args[0]))
+                ret = self.cursor.executemany(trace(query), trace(args))
+                return trace(ret)
+            else:
+                return None
+        except Database.OperationalError, e:
+            # Map some error codes to IntegrityError, since they seem to be
+            # misclassified and Django would prefer the more logical place.
+            if e[0] in self.codes_for_integrityerror:
+                raise Database.IntegrityError(tuple(e))
+            raise
 
     def fetchone(self):
         if djangoVersion[:2] < (1, 4) or not settings.USE_TZ:
@@ -168,7 +160,7 @@ class DatabaseFeatures(BaseDatabaseFeatures):
     supports_regex_backreferencing = False
     supports_sequence_reset = False
     update_can_self_select = False
-    uses_custom_query_class = True
+    uses_custom_query_class = False
 
 class DatabaseOperations(BaseDatabaseOperations):
     compiler_module = "sqlany_django.compiler"
@@ -333,7 +325,7 @@ class DatabaseOperations(BaseDatabaseOperations):
             for sequence in sequences:
                 sql.append('call sa_reset_identity(\'%s\', NULL, 0);' % sequence['table'])
             
-            sql.append('SET TEMPORARY OPTION wait_for_commit = \'Off\'')
+            sql.append('SET TEMPORARY OPTION wait_for_commit = \'Off\';')
             sql.append('COMMIT;')
             
             return sql
@@ -388,6 +380,8 @@ class DatabaseWrapper(BaseDatabaseWrapper):
         'iendswith': "LIKE %s ESCAPE '\\'"
     }
 
+    Database = Database
+    
     def __init__(self, *args, **kwargs):
         super(DatabaseWrapper, self).__init__(*args, **kwargs)
 
@@ -403,7 +397,10 @@ class DatabaseWrapper(BaseDatabaseWrapper):
         self.client = DatabaseClient(self)
         self.creation = DatabaseCreation(self)
         self.introspection = DatabaseIntrospection(self)
-        self.validation = DatabaseValidation(self)
+        if djangoVersion[:2] >= (1, 2):
+            self.validation = DatabaseValidation(self)
+        else:
+            self.validation = DatabaseValidation()
 
     def _valid_connection(self):
         if self.connection is not None:
@@ -423,13 +420,26 @@ class DatabaseWrapper(BaseDatabaseWrapper):
         if not self._valid_connection():
             kwargs = {}
             links = {}
+
             settings_dict = self.settings_dict
-            if settings_dict['USER']:
-                kwargs['uid'] = settings_dict['USER']
-            if settings_dict['NAME']:
-                kwargs['dbn'] = settings_dict['NAME']
-            if settings_dict['PASSWORD']:
-                kwargs['pwd'] = settings_dict['PASSWORD']
+
+            def setting( key ):
+                if settings_dict.has_key(key):
+                    return settings_dict[key]
+                if settings_dict.has_key('DATABASE_%s' % key):
+                    return settings_dict['DATABASE_%s' % key]
+                return None
+            #
+
+            uid = setting( 'USER' )
+            if uid is not None:
+                kwargs['uid'] = uid
+            dbn = setting( 'NAME' )
+            if dbn is not None:
+                kwargs['dbn'] = dbn
+            pwd = setting( 'PASSWORD' )
+            if pwd is not None:
+                kwargs['pwd'] = pwd
 
             root = Database.Root('PYTHON')
 
@@ -445,25 +455,23 @@ class DatabaseWrapper(BaseDatabaseWrapper):
                 vers = int(vers.split('.')[0])
             else:
                 vers = 11 # assume old
-            host = settings_dict['HOST']
+            host = setting( 'HOST' )
             if host == '':
                 host = 'localhost' # "Set to empty string for localhost"
-            if host and vers > 11:
+            if host is not None and vers > 11:
                 kwargs['host'] = host
-                try:
-                    port = str(settings_dict['PORT'])
-                except:
-                    port = None
-                if port:
+                port = setting( 'PORT' )
+                if port is not None:
                     kwargs['host'] += ':%s' % port
             else:
-                if host:
+                if host is not None:
                     links['host'] = host
-                if settings_dict['PORT']:
-                    links['port'] = str(settings_dict['PORT'])
+                port = setting( 'PORT' )
+                if port is not None:
+                    links['port'] = str( port )
             if len(links) > 0:
                 kwargs['links'] = 'tcpip(' + ','.join(k+'='+v for k, v in links.items()) + ')'
-            kwargs.update(settings_dict['OPTIONS'])
+            kwargs.update(setting( 'OPTIONS' ))
             self.connection = Database.connect(**kwargs)
             cursor = CursorWrapper(self.connection.cursor())
             cursor.execute("SET OPTION PUBLIC.reserved_keywords='LIMIT'")
