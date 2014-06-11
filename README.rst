@@ -238,7 +238,7 @@ tested with SQL Anywhere versions 12 and 16 using Django versions 1.1,
     forum where many of the SQL Anywhere engineers hang out.
     
     | SQL Anywhere Online Documentation: http://dcx.sybase.com/
-    | SQL Anywhere Development Forum: http://sqlanywhere-forum.sybase.com/
+    | SQL Anywhere Development Forum: http://sqlanywhere-forum.sap.com/
     
 #. Where to go from here?
 
