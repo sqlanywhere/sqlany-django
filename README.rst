@@ -11,7 +11,7 @@ tested with SQL Anywhere versions 12 and 16 using Django versions 1.1,
 
 #. Install the required software
 
-    (a) SQL Anywhere 12.0.1 (or higher)
+    (a) SQL Anywhere 12.0.0 (or higher)
 
        The SQL Anywhere Web Edition is a free, full-featured version for
        development and deployment of browser based applications. If you don't
@@ -163,9 +163,8 @@ tested with SQL Anywhere versions 12 and 16 using Django versions 1.1,
        * HOST = Host
        * PORT = (port number in host, i.e. myhost:portnum)
 
-    If you need to specify other connection parameters (eg. ENG, which is required
-    for client versions prior to v12.0.0), you can set a value with the key
-    "OPTIONS", like this::
+    If you need to specify other connection parameters (eg. ENG), 
+    you can set a value with the key "OPTIONS", like this::
     
        DATABASES = {
 	  'default' : {
