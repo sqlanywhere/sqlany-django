@@ -6,8 +6,8 @@ SQL Anywhere Django Driver
 ==========================
 This is a SQL Anywhere database backend for Django. The backend is
 distributed as a stand-alone python module. This backend has been
-tested with SQL Anywhere versions 12 and 16 using Django versions 1.1,
-1.1.4, 1.2.7, 1.3.7, 1.4.10, 1.5.5, and 1.6.1.
+tested with SQL Anywhere versions 12 and 16 using Django versions 1.1.4, 1.2.7,
+1.3.7, 1.4.10, 1.5.5, and 1.6.1.
 
 #. Install the required software
 
@@ -49,9 +49,9 @@ tested with SQL Anywhere versions 12 and 16 using Django versions 1.1,
            $ easy_install Django
 
        If you want a specific version of Django, you can give the version using
-       the == syntax. For example, if you want 1.3.7, you can use::
+       the == syntax. For example, if you want 1.6.1, you can use::
     
-           $ easy_install Django==1.3.7
+           $ easy_install Django==1.6.1
 
     (e) Python SQL Anywhere Database Interface
     
@@ -236,7 +236,7 @@ tested with SQL Anywhere versions 12 and 16 using Django versions 1.1,
     out what went wrong. You can consult the documentation, or post to a
     forum where many of the SQL Anywhere engineers hang out.
     
-    | SQL Anywhere Online Documentation: http://dcx.sybase.com/
+    | SQL Anywhere Online Documentation: http://dcx.sap.com/
     | SQL Anywhere Development Forum: http://sqlanywhere-forum.sap.com/
     
 #. Where to go from here?

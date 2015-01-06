@@ -28,6 +28,7 @@ from sqlany_django.validation import DatabaseValidation
 
 from django.utils.safestring import SafeString, SafeUnicode
 
+
 DatabaseError = Database.DatabaseError
 IntegrityError = Database.IntegrityError
 
@@ -204,6 +205,47 @@ class DatabaseOperations(BaseDatabaseOperations):
             format_str = ''.join([f for f in format[:i]] + [f for f in format_def[i:]])
             sql = "CAST(DATEFORMAT(%s, '%s') AS DATETIME)" % (field_name, format_str)
         return sql
+
+    def datetime_extract_sql(self, lookup_type, field_name, tzname):
+        """
+        Given a lookup_type of 'year', 'month', 'day', 'hour', 'minute' or
+        'second', returns the SQL that extracts a value from the given
+        datetime field field_name, and a tuple of parameters.
+        """
+        if settings.USE_TZ:
+            params = [tzname]
+        else:
+            params = []
+        if lookup_type == 'week_day':
+            # Returns an integer, 1-7, Sunday=1
+            sql = "DATEFORMAT(%s, 'd')" % field_name
+        else:
+            # YEAR(), MONTH(), DAY(), HOUR(), MINUTE(), SECOND() functions
+            sql = "%s(%s)" % (lookup_type.upper(), field_name)
+        return sql,params
+
+    def datetime_trunc_sql(self, lookup_type, field_name, tzname):
+        """
+        Given a lookup_type of 'year', 'month', 'day', 'hour', 'minute' or
+        'second', returns the SQL that truncates the given datetime field
+        field_name to a datetime object with only the given specificity, and
+        a tuple of parameters.
+        """
+        fields = ['year', 'month', 'day', 'hour', 'minute', 'second']
+        format = ('YYYY-', 'MM', '-DD', 'HH:', 'NN', ':SS') # Use double percents to escape.
+        format_def = ('0000-', '01', '-01', ' 00:', '00', ':00')
+        if settings.USE_TZ:
+            params = [tzname]
+        else:
+            params = []
+        try:
+            i = fields.index(lookup_type) + 1
+        except ValueError:
+            sql = field_name
+        else:
+            format_str = ''.join([f for f in format[:i]] + [f for f in format_def[i:]])
+            sql = "CAST(DATEFORMAT(%s, '%s') AS DATETIME)" % (field_name, format_str)
+        return sql,params
 
     def deferrable_sql(self):
         return " CHECK ON COMMIT"
@@ -416,65 +458,87 @@ class DatabaseWrapper(BaseDatabaseWrapper):
         self.cursor().execute('PREPARE TO COMMIT')
 
     def _cursor(self):
+        return self.create_cursor()
+
+    def _rollback(self):
+        try:
+            BaseDatabaseWrapper._rollback(self)
+        except Database.NotSupportedError:
+            pass
+
+    # New methods for Django 1.6
+    def get_connection_params(self):
+        kwargs = {}
+        links = {}
+
+        settings_dict = self.settings_dict
+
+        def setting( key ):
+            if settings_dict.has_key(key):
+                return settings_dict[key]
+            if settings_dict.has_key('DATABASE_%s' % key):
+                return settings_dict['DATABASE_%s' % key]
+            return None
+        #
+
+        uid = setting( 'USER' )
+        if uid is not None:
+            kwargs['uid'] = uid
+        dbn = setting( 'NAME' )
+        if dbn is not None:
+            kwargs['dbn'] = dbn
+        pwd = setting( 'PASSWORD' )
+        if pwd is not None:
+            kwargs['pwd'] = pwd
+
+        root = Database.Root('PYTHON')
+
+        try:
+            vers = root.api.sqlany_client_version()
+            ret = True
+        except:
+            length = 1000
+            buffer = ctypes.create_string_buffer(length)
+            ret = root.api.sqlany_client_version(ctypes.byref(buffer), length)
+            vers = buffer.value
+        if ret:
+            vers = int(vers.split('.')[0])
+        else:
+            vers = 11 # assume old
+        host = setting( 'HOST' )
+        if host == '':
+            host = 'localhost' # "Set to empty string for localhost"
+        if host is not None and vers > 11:
+            kwargs['host'] = host
+            port = setting( 'PORT' )
+            if port is not None:
+                kwargs['host'] += ':%s' % port
+        else:
+            if host is not None:
+                links['host'] = host
+            port = setting( 'PORT' )
+            if port is not None:
+                links['port'] = str( port )
+        if len(links) > 0:
+            kwargs['links'] = 'tcpip(' + ','.join(k+'='+v for k, v in links.items()) + ')'
+        kwargs.update(setting( 'OPTIONS' ))
+        return kwargs
+
+    def get_new_connection( self, conn_params ):
+        return Database.connect(**conn_params)
+        
+    def init_connection_state( self ):
+        if self.settings_dict['AUTOCOMMIT']:
+            self.set_autocommit(self.settings_dict['AUTOCOMMIT'])
+
+    def create_cursor( self ):
         cursor = None
         if not self._valid_connection():
-            kwargs = {}
-            links = {}
-
-            settings_dict = self.settings_dict
-
-            def setting( key ):
-                if settings_dict.has_key(key):
-                    return settings_dict[key]
-                if settings_dict.has_key('DATABASE_%s' % key):
-                    return settings_dict['DATABASE_%s' % key]
-                return None
-            #
-
-            uid = setting( 'USER' )
-            if uid is not None:
-                kwargs['uid'] = uid
-            dbn = setting( 'NAME' )
-            if dbn is not None:
-                kwargs['dbn'] = dbn
-            pwd = setting( 'PASSWORD' )
-            if pwd is not None:
-                kwargs['pwd'] = pwd
-
-            root = Database.Root('PYTHON')
-
-            try:
-                vers = root.api.sqlany_client_version()
-                ret = True
-            except:
-                length = 1000
-                buffer = ctypes.create_string_buffer(length)
-                ret = root.api.sqlany_client_version(ctypes.byref(buffer), length)
-                vers = buffer.value
-            if ret:
-                vers = int(vers.split('.')[0])
-            else:
-                vers = 11 # assume old
-            host = setting( 'HOST' )
-            if host == '':
-                host = 'localhost' # "Set to empty string for localhost"
-            if host is not None and vers > 11:
-                kwargs['host'] = host
-                port = setting( 'PORT' )
-                if port is not None:
-                    kwargs['host'] += ':%s' % port
-            else:
-                if host is not None:
-                    links['host'] = host
-                port = setting( 'PORT' )
-                if port is not None:
-                    links['port'] = str( port )
-            if len(links) > 0:
-                kwargs['links'] = 'tcpip(' + ','.join(k+'='+v for k, v in links.items()) + ')'
-            kwargs.update(setting( 'OPTIONS' ))
-            self.connection = Database.connect(**kwargs)
+            kwargs = self.get_connection_params()
+            self.connection = self.get_new_connection(kwargs)
             cursor = CursorWrapper(self.connection.cursor())
-            cursor.execute("SET OPTION PUBLIC.reserved_keywords='LIMIT'")
+            if djangoVersion[:2] < (1, 2):
+                cursor.execute("SET TEMPORARY OPTION PUBLIC.reserved_keywords='LIMIT'")
             cursor.execute("SET TEMPORARY OPTION TIMESTAMP_FORMAT='YYYY-MM-DD HH:NN:SS.SSSSSS'")
             connection_created.send(sender=self.__class__, connection=self)
         if not cursor:
@@ -482,8 +546,19 @@ class DatabaseWrapper(BaseDatabaseWrapper):
 
         return cursor
 
-    def _rollback(self):
-        try:
-            BaseDatabaseWrapper._rollback(self)
-        except Database.NotSupportedError:
-            pass
+    def _set_autocommit( self, autocommit ):
+        """
+        Backend-specific implementation to enable or disable autocommit.
+        """
+        curs = self.create_cursor()
+        curs.execute( "SET TEMPORARY OPTION chained='%s'" %
+                      ('Off' if autocommit else 'On') )
+        curs.close()
+
+    def is_usable(self):
+        """
+        Tests if the database connection is usable.
+        This function may assume that self.connection is not None.
+        """
+        return self._valid_connection()
+#
