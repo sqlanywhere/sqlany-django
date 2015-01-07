@@ -6,7 +6,7 @@ from django import VERSION as djangoVersion
 
 try:
     import sqlanydb as Database
-except ImportError, e:
+except ImportError as e:
     from django.core.exceptions import ImproperlyConfigured
     raise ImproperlyConfigured("Error loading sqlanydb module: %s" % e)
 
@@ -105,7 +105,7 @@ class DatabaseCreation(BaseDatabaseCreation):
             links['port'] = str(settings_dict['PORT'])
         kwargs.update(settings_dict['OPTIONS'])
         if len(links) > 0:
-            kwargs['links'] = 'tcpip(' + ','.join(k+'='+v for k, v in links.items()) + ')'
+            kwargs['links'] = 'tcpip(' + ','.join(k+'='+v for k, v in list(links.items())) + ')'
         return Database.connect(**kwargs)
 
     def _create_test_db(self, verbosity, autoclobber):
@@ -120,26 +120,26 @@ class DatabaseCreation(BaseDatabaseCreation):
         try:
             cursor.execute("CREATE DATABASE '%s' %s COLLATION 'UCA'" % (test_database_name, suffix))
             cursor.execute("START DATABASE '%s' %s" % (test_database_name, suffix_start))
-        except Exception, e:
+        except Exception as e:
             traceback.print_exc()
             sys.stderr.write("Got an error creating the test database: %s\n" % e)
             if not autoclobber:
-                confirm = raw_input("Type 'yes' if you would like to try deleting the test database '%s', or 'no' to cancel: " % test_database_name)
+                confirm = eval(input("Type 'yes' if you would like to try deleting the test database '%s', or 'no' to cancel: " % test_database_name))
             if autoclobber or confirm == 'yes':
                 try:
                     if verbosity >= 1:
-                        print "Destroying old test database..."
+                        print( "Destroying old test database..." )
                     cursor.execute("STOP DATABASE %s" % test_database_name)
                     cursor.execute("DROP DATABASE '%s'" % test_database_name)
                     if verbosity >= 1:
-                        print "Creating test database..."
+                        print( "Creating test database..." )
                     cursor.execute("CREATE DATABASE '%s' %s COLLATION 'UCA'" % (test_database_name, suffix))
                     cursor.execute("START DATABASE '%s' %s" % (test_database_name, suffix))
-                except Exception, e:
+                except Exception as e:
                     sys.stderr.write("Got an error recreating the test database: %s\n" % e)
                     sys.exit(2)
             else:
-                print "Tests cancelled."
+                print( "Tests cancelled." )
                 sys.exit(1)
         finally:
             cursor.close()
@@ -160,7 +160,7 @@ class DatabaseCreation(BaseDatabaseCreation):
             # a database name when droping a database
             cursor.execute("STOP DATABASE %s" % test_database_name)
             cursor.execute("DROP DATABASE '%s'" % test_database_name)
-        except Exception, e:
+        except Exception as e:
             traceback.print_exc()
             sys.stderr.write("Got an error dropping test database: %s\n" % e)
         finally:

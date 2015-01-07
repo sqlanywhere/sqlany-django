@@ -4,11 +4,11 @@ SQL Anywhere database backend for Django.
 Requires sqlanydb
 """
 
-import re,ctypes
+import re,ctypes,sys
 
 try:
     import sqlanydb as Database
-except ImportError, e:
+except ImportError as e:
     from django.core.exceptions import ImproperlyConfigured
     raise ImproperlyConfigured("Error loading sqlanydb module: %s" % e)
 
@@ -29,9 +29,6 @@ if djangoVersion[:2] >= (1, 7):
     from sqlany_django.schema import DatabaseSchemaEditor
     util = utils
 
-from django.utils.safestring import SafeString, SafeUnicode
-
-
 DatabaseError = Database.DatabaseError
 IntegrityError = Database.IntegrityError
 
@@ -42,14 +39,14 @@ Database.register_converter(Database.DT_DECIMAL, util.typecast_decimal)
 Database.register_converter(Database.DT_BIT, lambda x: x if x is None else bool(x))
 
 def trace(x):
-    # print x
+    # print( x )
     return x
 
 def _datetimes_in(args):
     def fix(arg):
         if isinstance(arg, datetime.datetime):
             if is_naive(arg):
-                warnings.warn(u"Received a naive datetime (%s) while timezone support is active." % arg, RuntimeWarning)
+                warnings.warn("Received a naive datetime (%s) while timezone support is active." % arg, RuntimeWarning)
                 arg = make_aware(arg, timezone.get_default_timezone())
             arg = arg.astimezone(utc).replace(tzinfo=None)
         return arg
@@ -90,7 +87,7 @@ class CursorWrapper(object):
                 query = self.convert_query(query, len(args))
             ret = self.cursor.execute(trace(query), trace(args))
             return ret
-        except Database.OperationalError, e:
+        except Database.OperationalError as e:
             # Map some error codes to IntegrityError, since they seem to be
             # misclassified and Django would prefer the more logical place.
             if e[0] in self.codes_for_integrityerror:
@@ -111,7 +108,7 @@ class CursorWrapper(object):
                 return trace(ret)
             else:
                 return None
-        except Database.OperationalError, e:
+        except Database.OperationalError as e:
             # Map some error codes to IntegrityError, since they seem to be
             # misclassified and Django would prefer the more logical place.
             if e[0] in self.codes_for_integrityerror:
@@ -382,7 +379,7 @@ class DatabaseOperations(BaseDatabaseOperations):
                 else:
                     make_naive(value, get_default_timezone())
     
-        return unicode(value)
+        return str(value)
 
     def value_to_db_time(self, value):
         if value is None:
@@ -396,7 +393,7 @@ class DatabaseOperations(BaseDatabaseOperations):
             if is_aware(value):
                 make_naive(value, get_default_timezone())
     
-        return unicode(value)
+        return str(value)
 
 class DatabaseWrapper(BaseDatabaseWrapper):
     vendor = 'sqlanywhere'
@@ -469,10 +466,11 @@ class DatabaseWrapper(BaseDatabaseWrapper):
         settings_dict = self.settings_dict
 
         def setting( key ):
-            if settings_dict.has_key(key):
+            if key in settings_dict:
                 return settings_dict[key]
-            if settings_dict.has_key('DATABASE_%s' % key):
-                return settings_dict['DATABASE_%s' % key]
+            dbkey = 'DATABASE_%s' % key
+            if dbkey in settings_dict:
+                return settings_dict[dbkey]
             return None
         #
 
@@ -497,6 +495,9 @@ class DatabaseWrapper(BaseDatabaseWrapper):
             ret = root.api.sqlany_client_version(ctypes.byref(buffer), length)
             vers = buffer.value
         if ret:
+            if sys.version_info[0] >= 3:
+                # Python 3: convert bytes to str
+                vers = str(vers, 'utf-8')
             vers = int(vers.split('.')[0])
         else:
             vers = 11 # assume old
@@ -515,7 +516,7 @@ class DatabaseWrapper(BaseDatabaseWrapper):
             if port is not None:
                 links['port'] = str( port )
         if len(links) > 0:
-            kwargs['links'] = 'tcpip(' + ','.join(k+'='+v for k, v in links.items()) + ')'
+            kwargs['links'] = 'tcpip(' + ','.join(k+'='+v for k, v in list(links.items())) + ')'
         kwargs.update(setting( 'OPTIONS' ))
         return kwargs
 

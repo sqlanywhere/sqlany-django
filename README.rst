@@ -7,7 +7,7 @@ SQL Anywhere Django Driver
 This is a SQL Anywhere database backend for Django. The backend is
 distributed as a stand-alone python module. This backend has been
 tested with SQL Anywhere versions 12 and 16 using Django versions 1.1.4, 1.2.7,
-1.3.7, 1.4.10, 1.5.5, 1.6.1, and 1.7.1.
+1.3.7, 1.4.10, 1.5.5, 1.6.1, and 1.7.1. 
 
 #. Install the required software
 
@@ -22,10 +22,9 @@ tested with SQL Anywhere versions 12 and 16 using Django versions 1.1.4, 1.2.7,
     (b) Python (2.4 or greater)
 
        Install Python if you don't already have it installed. We recommend
-       Python 2.7 but any version greater than 2.4 is supported. Note however
-       that Python 3 introduced backwards incompatible features and many
-       projects including Django do not currently have support for Python 3.
-       You can download python from http://www.python.org/download/
+       Python 2.7 but any version greater than 2.4 is supported. Python 3 is
+       supported in Django 1.6 and later. You can download python from
+       http://www.python.org/download/
     
        If you are running on Linux you will most likely also be able to find
        python through your distribution's package management system.
