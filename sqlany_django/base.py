@@ -25,6 +25,9 @@ from sqlany_django.client import DatabaseClient
 from sqlany_django.creation import DatabaseCreation
 from sqlany_django.introspection import DatabaseIntrospection
 from sqlany_django.validation import DatabaseValidation
+if djangoVersion[:2] >= (1, 7):
+    from sqlany_django.schema import DatabaseSchemaEditor
+    util = utils
 
 from django.utils.safestring import SafeString, SafeUnicode
 
@@ -212,17 +215,13 @@ class DatabaseOperations(BaseDatabaseOperations):
         'second', returns the SQL that extracts a value from the given
         datetime field field_name, and a tuple of parameters.
         """
-        if settings.USE_TZ:
-            params = [tzname]
-        else:
-            params = []
         if lookup_type == 'week_day':
             # Returns an integer, 1-7, Sunday=1
             sql = "DATEFORMAT(%s, 'd')" % field_name
         else:
             # YEAR(), MONTH(), DAY(), HOUR(), MINUTE(), SECOND() functions
             sql = "%s(%s)" % (lookup_type.upper(), field_name)
-        return sql,params
+        return sql,[]
 
     def datetime_trunc_sql(self, lookup_type, field_name, tzname):
         """
@@ -234,10 +233,6 @@ class DatabaseOperations(BaseDatabaseOperations):
         fields = ['year', 'month', 'day', 'hour', 'minute', 'second']
         format = ('YYYY-', 'MM', '-DD', 'HH:', 'NN', ':SS') # Use double percents to escape.
         format_def = ('0000-', '01', '-01', ' 00:', '00', ':00')
-        if settings.USE_TZ:
-            params = [tzname]
-        else:
-            params = []
         try:
             i = fields.index(lookup_type) + 1
         except ValueError:
@@ -245,7 +240,7 @@ class DatabaseOperations(BaseDatabaseOperations):
         else:
             format_str = ''.join([f for f in format[:i]] + [f for f in format_def[i:]])
             sql = "CAST(DATEFORMAT(%s, '%s') AS DATETIME)" % (field_name, format_str)
-        return sql,params
+        return sql,[]
 
     def deferrable_sql(self):
         return " CHECK ON COMMIT"
@@ -561,4 +556,11 @@ class DatabaseWrapper(BaseDatabaseWrapper):
         This function may assume that self.connection is not None.
         """
         return self._valid_connection()
+
+    # New methods for Django 1.7
+    if djangoVersion[:2] >= (1, 7):
+        def schema_editor(self, *args, **kwargs):
+            "Returns a new instance of this backend's SchemaEditor"
+            return DatabaseSchemaEditor( self, *args, **kwargs )
+        
 #
