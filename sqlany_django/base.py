@@ -15,7 +15,7 @@ except ImportError as e:
 from django import VERSION as djangoVersion
 
 if djangoVersion[:2] >= (1, 4):
-    from django.utils.timezone import is_aware, is_naive, utc, make_naive, get_default_timezone
+    from django.utils.timezone import is_aware, is_naive, utc, make_naive, make_aware, get_default_timezone
     import datetime
 
 from django.conf import settings
