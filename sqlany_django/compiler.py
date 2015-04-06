@@ -16,9 +16,8 @@ class SQLCompiler(compiler.SQLCompiler):
             insert = None
             if self.query.high_mark is not None:
                 num = self.query.high_mark - self.query.low_mark
-                if num <= 0:
-                    return None, None
-                insert = 'TOP %d' % num
+                if num > 0:
+                    insert = 'TOP %d' % num
             if self.query.low_mark:
                 if insert is None:
                     insert = 'TOP ALL'
