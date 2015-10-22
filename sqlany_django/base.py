@@ -473,15 +473,19 @@ class DatabaseWrapper(BaseDatabaseWrapper):
                 return settings_dict[dbkey]
             return None
         #
+        
+        def empty( s ):
+            return True if ( s is None or s == '' ) else False
+        #
 
         uid = setting( 'USER' )
-        if uid is not None:
+        if not empty( uid ):
             kwargs['uid'] = uid
         dbn = setting( 'NAME' )
-        if dbn is not None:
+        if not empty( dbn ):
             kwargs['dbn'] = dbn
         pwd = setting( 'PASSWORD' )
-        if pwd is not None:
+        if not empty( pwd ):
             kwargs['pwd'] = pwd
 
         root = Database.Root('PYTHON')
@@ -504,16 +508,16 @@ class DatabaseWrapper(BaseDatabaseWrapper):
         host = setting( 'HOST' )
         if host == '':
             host = 'localhost' # "Set to empty string for localhost"
-        if host is not None and vers > 11:
+        if not empty( host ) and vers > 11:
             kwargs['host'] = host
             port = setting( 'PORT' )
-            if port is not None:
+            if not empty( port ):
                 kwargs['host'] += ':%s' % port
         else:
-            if host is not None:
+            if not empty( host ):
                 links['host'] = host
             port = setting( 'PORT' )
-            if port is not None:
+            if not empty( port ):
                 links['port'] = str( port )
         if len(links) > 0:
             kwargs['links'] = 'tcpip(' + ','.join(k+'='+v for k, v in list(links.items())) + ')'

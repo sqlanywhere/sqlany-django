@@ -1,13 +1,13 @@
 .. ***************************************************************************
-.. Copyright (c) 2014 SAP AG or an SAP affiliate company. All rights reserved.
+.. Copyright (c) 2015 SAP AG or an SAP affiliate company. All rights reserved.
 .. ***************************************************************************
 
 SQL Anywhere Django Driver
 ==========================
 This is a SQL Anywhere database backend for Django. The backend is
 distributed as a stand-alone python module. This backend has been
-tested with SQL Anywhere versions 12 and 16 using Django versions 1.1.4, 1.2.7,
-1.3.7, 1.4.10, 1.5.5, 1.6.1, and 1.7.1. 
+tested with SQL Anywhere versions 12, 16, and 17 using Django versions 1.1.4, 
+1.2.7, 1.3.7, 1.4.10, 1.5.5, 1.6.1, and 1.7.1. 
 
 #. Install the required software
 
@@ -187,6 +187,18 @@ tested with SQL Anywhere versions 12 and 16 using Django versions 1.1.4, 1.2.7,
 	      'OPTIONS': {'eng': 'django'},
 	      'HOST': None,
 	      'PORT': None
+	  }
+       }
+
+    Alternatively, you can set the parameters in an ODBC data source using the 
+    dbdsn utility and then specify the DSN connection parameter. The ENGINE 
+    parameter must still be specified. Any other parameters (eg. USER, HOST, etc.)
+    that are specified will override the value in the DSN. For example::
+
+       DATABASES = {
+	  'default' : {
+ 	      'ENGINE': 'sqlany_django',
+	      'OPTIONS': {'dsn': 'my_django_dsn'}
 	  }
        }
     
