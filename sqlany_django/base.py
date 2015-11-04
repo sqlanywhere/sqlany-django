@@ -19,7 +19,16 @@ if djangoVersion[:2] >= (1, 4):
     import datetime
 
 from django.conf import settings
-from django.db.backends import *
+if djangoVersion[:2] >= (1, 8):
+    from django.db.backends.base.features import BaseDatabaseFeatures
+    from django.db.backends.base.operations import BaseDatabaseOperations
+    from django.db.backends.base.base import BaseDatabaseWrapper
+    from django.db.backends import utils as util
+else:
+    from django.db.backends import *
+    if djangoVersion[:2] >= (1, 7):
+        # renamed in 1.7
+        util = utils
 from django.db.backends.signals import connection_created
 from sqlany_django.client import DatabaseClient
 from sqlany_django.creation import DatabaseCreation
@@ -27,7 +36,8 @@ from sqlany_django.introspection import DatabaseIntrospection
 from sqlany_django.validation import DatabaseValidation
 if djangoVersion[:2] >= (1, 7):
     from sqlany_django.schema import DatabaseSchemaEditor
-    util = utils
+if djangoVersion[:2] >= (1, 8):
+    from sqlany_django.creation import global_data_types
 
 DatabaseError = Database.DatabaseError
 IntegrityError = Database.IntegrityError
@@ -157,6 +167,8 @@ class DatabaseFeatures(BaseDatabaseFeatures):
     allows_group_by_pk = False
     empty_fetchmany_value = []
     has_bulk_insert = True
+    has_select_for_update = True
+    has_zoneinfo_database = False
     related_fields_match_type = True
     supports_regex_backreferencing = False
     supports_sequence_reset = False
@@ -182,11 +194,16 @@ class DatabaseOperations(BaseDatabaseOperations):
             # YEAR(), MONTH(), DAY() functions
             return "%s(%s)" % (lookup_type.upper(), field_name)
 
-    def date_interval_sql(self, sql, connector, timedelta):
-        """
-        Implements the date interval functionality for expressions
-        """
-        return 'DATEADD(day, %s(%d), DATEADD(second, %s(%d), DATEADD(microsecond, %s(%d), %s)))' % (connector, timedelta.days, connector, timedelta.seconds, connector, timedelta.microseconds, sql)
+    if djangoVersion[:2] >= (1, 8):
+        # SQL Anywhere does not support the INTERVAL syntax
+        pass
+        #def date_interval_sql(self, timedelta):
+    else:
+        def date_interval_sql(self, sql, connector, timedelta):
+            """
+            Implements the date interval functionality for expressions
+            """
+            return 'DATEADD(day, %s(%d), DATEADD(second, %s(%d), DATEADD(microsecond, %s(%d), %s)))' % (connector, timedelta.days, connector, timedelta.seconds, connector, timedelta.microseconds, sql)
 
     def date_trunc_sql(self, lookup_type, field_name):
         """
@@ -413,6 +430,9 @@ class DatabaseWrapper(BaseDatabaseWrapper):
         'endswith': "LIKE %s ESCAPE '\\'",
         'iendswith': "LIKE %s ESCAPE '\\'"
     }
+    if djangoVersion[:2] >= (1, 8):
+        # Moved from DatabaseCreation in 1.8
+        data_types = global_data_types
 
     Database = Database
     
@@ -528,7 +548,7 @@ class DatabaseWrapper(BaseDatabaseWrapper):
         return Database.connect(**conn_params)
         
     def init_connection_state( self ):
-        if self.settings_dict['AUTOCOMMIT']:
+        if 'AUTOCOMMIT' in self.settings_dict:
             self.set_autocommit(self.settings_dict['AUTOCOMMIT'])
 
     def create_cursor( self ):

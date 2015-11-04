@@ -1,4 +1,8 @@
-from django.db.backends import BaseDatabaseIntrospection
+from django import VERSION as djangoVersion
+if djangoVersion[:2] >= (1, 8):
+    from django.db.backends.base.introspection import BaseDatabaseIntrospection, TableInfo
+else:
+    from django.db.backends import BaseDatabaseIntrospection
 from sqlanydb import ProgrammingError, OperationalError
 import re
 import sqlanydb
@@ -32,8 +36,12 @@ class DatabaseIntrospection(BaseDatabaseIntrospection):
 
     def get_table_list(self, cursor):
         "Returns a list of table names in the current database."
-        cursor.execute("SELECT table_name FROM sys.SYSTAB WHERE creator = USER_ID()")
-        return [row[0] for row in cursor.fetchall()]
+        cursor.execute( "SELECT table_name,table_type FROM sys.SYSTAB WHERE "
+                        "creator = USER_ID() and table_type in (1,2,3,4,21)" )
+        if djangoVersion[:2] < (1, 8):
+            return [row[0] for row in cursor.fetchall()]
+        return [TableInfo( row[0], 'v' if row[1] in ['2','21'] else 't' ) 
+                for row in cursor.fetchall()]
 
     def get_table_description(self, cursor, table_name):
         "Returns a description of the table, with the DB-API cursor.description interface."

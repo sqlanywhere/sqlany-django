@@ -1,4 +1,9 @@
-from django.db.backends import BaseDatabaseValidation
+from django import VERSION as djangoVersion
+
+if djangoVersion[:2] >= (1, 8):
+    from django.db.backends.base.validation import BaseDatabaseValidation
+else:
+    from django.db.backends import BaseDatabaseValidation
 
 class DatabaseValidation(BaseDatabaseValidation):
     def validate_field(self, errors, opts, f):

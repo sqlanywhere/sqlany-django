@@ -1,8 +1,13 @@
 import sys, traceback, time, re
 from django.conf import settings
-from django.db.backends.creation import BaseDatabaseCreation, TEST_DATABASE_PREFIX
 
 from django import VERSION as djangoVersion
+
+if djangoVersion[:2] >= (1, 8):
+    from django.db.backends.base.creation import BaseDatabaseCreation, TEST_DATABASE_PREFIX
+else:
+    from django.db.backends.creation import BaseDatabaseCreation, TEST_DATABASE_PREFIX
+
 
 try:
     import sqlanydb as Database
@@ -10,35 +15,40 @@ except ImportError as e:
     from django.core.exceptions import ImproperlyConfigured
     raise ImproperlyConfigured("Error loading sqlanydb module: %s" % e)
 
+global_data_types = {
+    'AutoField':         'integer DEFAULT AUTOINCREMENT',
+    'BooleanField':      'bit',
+    'NullBooleanField':  'bit null',
+    'CharField':         'varchar(%(max_length)s)',
+    'CommaSeparatedIntegerField': 'varchar(%(max_length)s)',
+    'DateField':         'date',
+    'DateTimeField':     'datetime',
+    'DecimalField':      'numeric(%(max_digits)s, %(decimal_places)s)',
+    'FileField':         'varchar(%(max_length)s)',
+    'FilePathField':     'varchar(%(max_length)s)',
+    'FloatField':        'double precision',
+    'IntegerField':      'integer',
+    'BigIntegerField':   'bigint',
+    'IPAddressField':    'char(15)',
+    'GenericIPAddressField': 'char(39)',
+    'OneToOneField':     'integer',
+    'PositiveIntegerField': 'UNSIGNED integer',
+    'PositiveSmallIntegerField': 'UNSIGNED smallint',
+    'SlugField':         'varchar(%(max_length)s)',
+    'SmallIntegerField': 'smallint',
+    'TextField':         'text',
+    'TimeField':         'time',
+}
+
 class DatabaseCreation(BaseDatabaseCreation):
     # This dictionary maps Field objects to their associated SQL Anywhere column
     # types, as strings. Column-type strings can contain format strings; they'll
     # be interpolated against the values of Field.__dict__ before being output.
     # If a column type is set to None, it won't be included in the output.
-    data_types = {
-        'AutoField':         'integer DEFAULT AUTOINCREMENT',
-        'BooleanField':      'bit',
-        'NullBooleanField':  'bit null',
-        'CharField':         'varchar(%(max_length)s)',
-        'CommaSeparatedIntegerField': 'varchar(%(max_length)s)',
-        'DateField':         'date',
-        'DateTimeField':     'datetime',
-        'DecimalField':      'numeric(%(max_digits)s, %(decimal_places)s)',
-        'FileField':         'varchar(%(max_length)s)',
-        'FilePathField':     'varchar(%(max_length)s)',
-        'FloatField':        'double precision',
-        'IntegerField':      'integer',
-        'BigIntegerField':   'bigint',
-        'IPAddressField':    'char(15)',
-        'GenericIPAddressField': 'char(39)',
-        'OneToOneField':     'integer',
-        'PositiveIntegerField': 'UNSIGNED integer',
-        'PositiveSmallIntegerField': 'UNSIGNED smallint',
-        'SlugField':         'varchar(%(max_length)s)',
-        'SmallIntegerField': 'smallint',
-        'TextField':         'text',
-        'TimeField':         'time',
-    }
+
+    if djangoVersion[:2] < (1, 8):
+        # Moved to DatabaseWrapper in 1.8
+        data_types = global_data_types
 
     def sql_table_creation_suffix(self):
         suffix = []
