@@ -257,7 +257,7 @@ class DatabaseOperations(BaseDatabaseOperations):
         return sql,[]
 
     def deferrable_sql(self):
-        return " CHECK ON COMMIT"
+        return ""
 
     def drop_foreignkey_sql(self):
         """
@@ -545,11 +545,18 @@ class DatabaseWrapper(BaseDatabaseWrapper):
         return kwargs
 
     def get_new_connection( self, conn_params ):
-        return Database.connect(**conn_params)
+        conn = Database.connect(**conn_params)
+        if conn is not None and djangoVersion[:2] >= (1, 6):
+            # Autocommit is the default for 1.6+
+            curs = conn.cursor()
+            curs.execute( "SET TEMPORARY OPTION chained='Off'" )
+            curs.close()
+        return conn
         
     def init_connection_state( self ):
-        if 'AUTOCOMMIT' in self.settings_dict:
-            self.set_autocommit(self.settings_dict['AUTOCOMMIT'])
+        if 'AUTOCOMMIT' in self.settings_dict and \
+           not self.settings_dict['AUTOCOMMIT']:
+            self.set_autocommit( False )
 
     def create_cursor( self ):
         cursor = None

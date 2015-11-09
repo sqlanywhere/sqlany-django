@@ -8,8 +8,6 @@ import re
 import sqlanydb
 
 
-foreign_key_re = re.compile(r"\sCONSTRAINT `[^`]*` FOREIGN KEY \(`([^`]*)`\) REFERENCES `([^`]*)` \(`([^`]*)`\)")
-
 class DatabaseIntrospection(BaseDatabaseIntrospection):
     data_types_reverse = { sqlanydb.DT_DATE         : 'DateField',
                            sqlanydb.DT_TIME         : 'DateTimeField',
