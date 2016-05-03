@@ -98,6 +98,12 @@ class CursorWrapper(object):
             ret = self.cursor.execute(trace(query), trace(args))
             return ret
         except Database.OperationalError as e:
+            if e.message == 'Connection was terminated':
+                from django import db
+                try:
+                    db.close_old_connections()
+                except AttributeError:
+                    db.close_connection()
             # Map some error codes to IntegrityError, since they seem to be
             # misclassified and Django would prefer the more logical place.
             if e.errorcode in self.codes_for_integrityerror:
