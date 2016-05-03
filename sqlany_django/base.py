@@ -100,8 +100,8 @@ class CursorWrapper(object):
         except Database.OperationalError as e:
             # Map some error codes to IntegrityError, since they seem to be
             # misclassified and Django would prefer the more logical place.
-            if e[0] in self.codes_for_integrityerror:
-                raise Database.IntegrityError(tuple(e))
+            if e.errorcode in self.codes_for_integrityerror:
+                raise Database.IntegrityError(e)
             raise
 
     def executemany(self, query, args):
@@ -121,8 +121,8 @@ class CursorWrapper(object):
         except Database.OperationalError as e:
             # Map some error codes to IntegrityError, since they seem to be
             # misclassified and Django would prefer the more logical place.
-            if e[0] in self.codes_for_integrityerror:
-                raise Database.IntegrityError(tuple(e))
+            if e.errorcode in self.codes_for_integrityerror:
+                raise Database.IntegrityError(e)
             raise
 
     def fetchone(self):
